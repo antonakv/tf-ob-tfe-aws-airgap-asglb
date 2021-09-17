@@ -246,6 +246,12 @@ resource "aws_lb_target_group" "aws5" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
+
+  health_check {
+    enabled = true
+    path    = "/_health_check"
+    matcher = 200
+  }
 }
 
 resource "aws_security_group" "aws5-lb-sg" {
@@ -300,16 +306,6 @@ resource "aws_lb_listener" "aws5" {
   }
 }
 
-resource "aws_launch_configuration" "aws5" {
-  image_id        = var.ami
-  instance_type   = var.instance_type
-  key_name        = var.key_name
-  security_groups = [aws_security_group.aws5-internal-sg.id]
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 resource "aws_placement_group" "aws5" {
   name     = "aws5"
   strategy = "spread"
@@ -318,8 +314,8 @@ resource "aws_placement_group" "aws5" {
 resource "aws_autoscaling_group" "aws5" {
   name                 = "aakulov-aws5"
   launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 2
-  max_size             = 5
+  min_size             = 1
+  max_size             = 3
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
@@ -381,6 +377,13 @@ resource "aws_s3_bucket" "aws5" {
   tags = {
     Name = "aakulov-aws5-tfe-data"
   }
+}
+
+resource "aws_s3_bucket_object" "logs" {
+  bucket       = aws_s3_bucket.aws5.id
+  acl          = "private"
+  key          = "logs/"
+  content_type = "application/x-directory"
 }
 
 resource "aws_s3_bucket_public_access_block" "aws5" {
@@ -480,21 +483,17 @@ data "template_cloudinit_config" "aws5_cloudinit" {
   }
 }
 
-resource "aws_instance" "aws5" {
-  ami                         = var.ami
+resource "aws_launch_configuration" "aws5" {
+  name                        = "aakulov-aws5-asg"
+  image_id                    = var.ami
   instance_type               = var.instance_type
   key_name                    = var.key_name
-  vpc_security_group_ids      = [aws_security_group.aakulov-aws5.id]
-  subnet_id                   = aws_subnet.subnet_public1.id
-  associate_public_ip_address = true
+  security_groups             = [aws_security_group.aws5-internal-sg.id]
   user_data                   = data.template_cloudinit_config.aws5_cloudinit.rendered
   iam_instance_profile        = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
-  metadata_options {
-    http_tokens   = "required"
-    http_endpoint = "enabled"
-  }
-  tags = {
-    Name = "aakulov-aws5"
+  associate_public_ip_address = true
+  lifecycle {
+    create_before_destroy = true
   }
 }
 

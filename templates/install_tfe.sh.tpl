@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 mkdir -p /home/ubuntu/install
+
+EC2_INSTANCE_ID=$(ec2metadata --instance-id)
+ec2metadata > /home/ubuntu/install/$EC2_INSTANCE_ID.log
+
 echo "
 {
     \"aws_access_key_id\": {},
@@ -134,14 +138,19 @@ IPADDR=$(hostname -I | awk '{print $1}')
 echo "#!/usr/bin/env bash
 chmod 600 /home/ubuntu/install/server.key
 cd /home/ubuntu/install
-aws s3 cp s3://aakulov-aws4-tfe-airgap . --recursive
+aws s3 cp s3://aakulov-aws5-tfe-airgap . --recursive --no-progress
 tar -xf latest.tar.gz
 sudo rm -rf /usr/share/keyrings/docker-archive-keyring.gpg
 cp /home/ubuntu/install/replicated.conf /etc/replicated.conf
 cp /home/ubuntu/install/replicated.conf /root/replicated.conf
 chown -R ubuntu: /home/ubuntu/install
+
 yes | sudo ./install.sh airgap no-proxy private-address=$IPADDR public-address=$IPADDR" > /home/ubuntu/install/install_tfe.sh
 
 chmod +x /home/ubuntu/install/install_tfe.sh
 
 sh /home/ubuntu/install/install_tfe.sh &> /home/ubuntu/install/install_tfe.log
+
+cat /home/ubuntu/install/install_tfe.log >> /home/ubuntu/install/$EC2_INSTANCE_ID.log
+
+aws s3 cp /home/ubuntu/install/$EC2_INSTANCE_ID.log s3://aakulov-aws5-tfe-logs/$EC2_INSTANCE_ID.log --no-progress
