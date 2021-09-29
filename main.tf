@@ -491,10 +491,6 @@ resource "aws_launch_configuration" "aws5" {
   security_groups             = [aws_security_group.aws5-internal-sg.id]
   user_data                   = data.template_cloudinit_config.aws5_cloudinit.rendered
   iam_instance_profile        = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
-  associate_public_ip_address = true
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 output "aws_url" {
