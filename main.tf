@@ -147,8 +147,22 @@ resource "aws_security_group" "aws5-internal-sg" {
   }
 
   ingress {
+    from_port   = 8800
+    to_port     = 8800
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port       = 80
     to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.aws5-lb-sg.id]
+  }
+
+  ingress {
+    from_port       = 8800
+    to_port         = 8800
     protocol        = "tcp"
     security_groups = [aws_security_group.aws5-lb-sg.id]
   }
@@ -269,6 +283,13 @@ resource "aws_security_group" "aws5-lb-sg" {
   }
 
   ingress {
+    from_port   = 8800
+    to_port     = 8800
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -314,7 +335,7 @@ resource "aws_placement_group" "aws5" {
 resource "aws_autoscaling_group" "aws5" {
   name                 = "aakulov-aws5"
   launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 1
+  min_size             = 2
   max_size             = 3
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
@@ -484,13 +505,13 @@ data "template_cloudinit_config" "aws5_cloudinit" {
 }
 
 resource "aws_launch_configuration" "aws5" {
-  name                        = "aakulov-aws5-asg"
-  image_id                    = var.ami
-  instance_type               = var.instance_type
-  key_name                    = var.key_name
-  security_groups             = [aws_security_group.aws5-internal-sg.id]
-  user_data                   = data.template_cloudinit_config.aws5_cloudinit.rendered
-  iam_instance_profile        = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
+  name                 = "aakulov-aws5-asg"
+  image_id             = var.ami
+  instance_type        = var.instance_type
+  key_name             = var.key_name
+  security_groups      = [aws_security_group.aws5-internal-sg.id]
+  user_data            = data.template_cloudinit_config.aws5_cloudinit.rendered
+  iam_instance_profile = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
 }
 
 output "aws_url" {
