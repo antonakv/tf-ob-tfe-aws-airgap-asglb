@@ -514,6 +514,32 @@ resource "aws_launch_configuration" "aws5" {
   iam_instance_profile = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
 }
 
+resource "aws_s3_bucket" "aws5-flow-log" {
+  bucket        = "aakulov-aws5-flow-log"
+  acl           = "private"
+  force_destroy = true
+  tags = {
+    Name = "aakulov-aws5-flow-log"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "aws5-flow-log" {
+  bucket = aws_s3_bucket.aws5-flow-log.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+resource "aws_flow_log" "aws5" {
+  log_destination_type     = "s3"
+  vpc_id                   = aws_vpc.vpc.id
+  log_destination          = aws_s3_bucket.aws5-flow-log.arn
+  traffic_type             = "ALL"
+  max_aggregation_interval = 600
+}
+
 output "aws_url" {
   value       = aws_route53_record.aws5.name
   description = "Domain name of load balancer"
