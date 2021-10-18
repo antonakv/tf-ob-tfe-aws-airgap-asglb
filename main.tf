@@ -2,6 +2,10 @@ provider "aws" {
   region = var.region
 }
 
+locals {
+  aakulov-aws5-lb-s3-policy-resource-name = join("", [aws_s3_bucket.aws5-lb-log.arn, "/AWSLogs/", data.aws_caller_identity.current.account_id, "/*"])
+}
+
 resource "tls_private_key" "aws5" {
   algorithm = "RSA"
 }
@@ -108,13 +112,23 @@ resource "aws_route_table" "aws5-public" {
   }
 }
 
-resource "aws_route_table_association" "aws5-private" {
+resource "aws_route_table_association" "aws5-private-1" {
   subnet_id      = aws_subnet.subnet_private1.id
   route_table_id = aws_route_table.aws5-private.id
 }
 
-resource "aws_route_table_association" "aws5-public" {
+resource "aws_route_table_association" "aws5-private-2" {
+  subnet_id      = aws_subnet.subnet_private2.id
+  route_table_id = aws_route_table.aws5-private.id
+}
+
+resource "aws_route_table_association" "aws5-public-1" {
   subnet_id      = aws_subnet.subnet_public1.id
+  route_table_id = aws_route_table.aws5-public.id
+}
+
+resource "aws_route_table_association" "aws5-public-2" {
+  subnet_id      = aws_subnet.subnet_public2.id
   route_table_id = aws_route_table.aws5-public.id
 }
 
@@ -163,6 +177,13 @@ resource "aws_security_group" "aws5-internal-sg" {
   ingress {
     from_port       = 8800
     to_port         = 8800
+    protocol        = "tcp"
+    security_groups = [aws_security_group.aws5-lb-sg.id]
+  }
+
+  ingress {
+    from_port       = 443
+    to_port         = 443
     protocol        = "tcp"
     security_groups = [aws_security_group.aws5-lb-sg.id]
   }
@@ -256,7 +277,7 @@ resource "aws_acm_certificate_validation" "aws5" {
 
 resource "aws_lb_target_group" "aws5" {
   name        = "aakulov-aws5"
-  port        = 80
+  port        = 443
   protocol    = "HTTP"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
@@ -311,6 +332,11 @@ resource "aws_lb" "aws5" {
   security_groups    = [aws_security_group.aws5-lb-sg.id]
   subnets            = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
 
+  access_logs {
+    bucket  = aws_s3_bucket.aws5-lb-log.bucket
+    enabled = true
+  }
+
   enable_deletion_protection = false
 }
 
@@ -335,11 +361,11 @@ resource "aws_placement_group" "aws5" {
 resource "aws_autoscaling_group" "aws5" {
   name                 = "aakulov-aws5"
   launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 2
-  max_size             = 3
+  min_size             = 1
+  max_size             = 1
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
-  vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
+  vpc_zone_identifier  = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
   target_group_arns    = [aws_lb_target_group.aws5.arn]
   timeouts {
     delete = "15m"
@@ -512,6 +538,93 @@ resource "aws_launch_configuration" "aws5" {
   security_groups      = [aws_security_group.aws5-internal-sg.id]
   user_data            = data.template_cloudinit_config.aws5_cloudinit.rendered
   iam_instance_profile = aws_iam_instance_profile.aakulov-aws5-ec2-s3.id
+}
+
+resource "aws_s3_bucket" "aws5-flow-log" {
+  bucket        = "aakulov-aws5-flow-log"
+  acl           = "private"
+  force_destroy = true
+  tags = {
+    Name = "aakulov-aws5-flow-log"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "aws5-flow-log" {
+  bucket = aws_s3_bucket.aws5-flow-log.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+resource "aws_flow_log" "aws5" {
+  log_destination_type     = "s3"
+  vpc_id                   = aws_vpc.vpc.id
+  log_destination          = aws_s3_bucket.aws5-flow-log.arn
+  traffic_type             = "ALL"
+  max_aggregation_interval = 600
+}
+
+resource "aws_s3_bucket" "aws5-lb-log" {
+  bucket        = "aakulov-aws5-lb-log"
+  acl           = "private"
+  force_destroy = true
+  tags = {
+    Name = "aakulov-aws5-lb-log"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "aws5-lb-log" {
+  bucket = aws_s3_bucket.aws5-lb-log.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+data "aws_caller_identity" "current" {}
+
+# Policy details
+# https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
+
+resource "aws_s3_bucket_policy" "aakulov-aws5-lb-s3" {
+  bucket = aws_s3_bucket.aws5-lb-log.id
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : "arn:aws:iam::054676820928:root"
+        },
+        "Action" : "s3:PutObject",
+        "Resource" : local.aakulov-aws5-lb-s3-policy-resource-name
+      },
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "delivery.logs.amazonaws.com"
+        },
+        "Action" : "s3:PutObject",
+        "Resource" : local.aakulov-aws5-lb-s3-policy-resource-name,
+        "Condition" : {
+          "StringEquals" : {
+            "s3:x-amz-acl" : "bucket-owner-full-control"
+          }
+        }
+      },
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "delivery.logs.amazonaws.com"
+        },
+        "Action" : "s3:GetBucketAcl",
+        "Resource" : aws_s3_bucket.aws5-lb-log.arn
+      }
+    ]
+  })
 }
 
 output "aws_url" {
