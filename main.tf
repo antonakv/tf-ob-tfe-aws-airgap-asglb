@@ -275,10 +275,24 @@ resource "aws_acm_certificate_validation" "aws5" {
   certificate_arn = aws_acm_certificate.aws5.arn
 }
 
-resource "aws_lb_target_group" "aws5" {
-  name        = "aakulov-aws5"
+resource "aws_lb_target_group" "aws5-443" {
+  name        = "aakulov-aws5-443"
   port        = 443
-  protocol    = "HTTP"
+  protocol    = "HTTPS"
+  vpc_id      = aws_vpc.vpc.id
+  target_type = "instance"
+
+  health_check {
+    enabled = true
+    path    = "/_health_check"
+    matcher = 200
+  }
+}
+
+resource "aws_lb_target_group" "aws5-8800" {
+  name        = "aakulov-aws5-8800"
+  port        = 8800
+  protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
 
@@ -340,7 +354,7 @@ resource "aws_lb" "aws5" {
   enable_deletion_protection = false
 }
 
-resource "aws_lb_listener" "aws5" {
+resource "aws_lb_listener" "aws5-443" {
   load_balancer_arn = aws_lb.aws5.arn
   port              = "443"
   protocol          = "HTTPS"
@@ -349,7 +363,20 @@ resource "aws_lb_listener" "aws5" {
   depends_on        = [aws_acm_certificate.aws5]
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.aws5.arn
+    target_group_arn = aws_lb_target_group.aws5-443.arn
+  }
+}
+
+resource "aws_lb_listener" "aws5-8800" {
+  load_balancer_arn = aws_lb.aws5.arn
+  port              = "8800"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-FS-1-2-Res-2020-10"
+  certificate_arn   = aws_acm_certificate_validation.aws5.certificate_arn
+  depends_on        = [aws_acm_certificate.aws5]
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.aws5-8800.arn
   }
 }
 
@@ -366,7 +393,7 @@ resource "aws_autoscaling_group" "aws5" {
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
-  target_group_arns    = [aws_lb_target_group.aws5.arn]
+  target_group_arns    = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
   timeouts {
     delete = "15m"
   }
@@ -420,7 +447,7 @@ resource "aws_db_instance" "aws5" {
 resource "aws_s3_bucket" "aws5" {
   bucket        = "aakulov-aws5-tfe-data"
   acl           = "private"
-  force_destroy = true
+  force_destroy = false
   tags = {
     Name = "aakulov-aws5-tfe-data"
   }
@@ -543,7 +570,7 @@ resource "aws_launch_configuration" "aws5" {
 resource "aws_s3_bucket" "aws5-flow-log" {
   bucket        = "aakulov-aws5-flow-log"
   acl           = "private"
-  force_destroy = true
+  force_destroy = false
   tags = {
     Name = "aakulov-aws5-flow-log"
   }
@@ -569,7 +596,7 @@ resource "aws_flow_log" "aws5" {
 resource "aws_s3_bucket" "aws5-lb-log" {
   bucket        = "aakulov-aws5-lb-log"
   acl           = "private"
-  force_destroy = true
+  force_destroy = false
   tags = {
     Name = "aakulov-aws5-lb-log"
   }
