@@ -318,7 +318,7 @@ resource "aws_lb_target_group" "aws5-443" {
   protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
-  slow_start  = 200
+  slow_start  = 400
   lifecycle {
     create_before_destroy = true
   }
@@ -327,7 +327,7 @@ resource "aws_lb_target_group" "aws5-443" {
     path    = "/_health_check"
     matcher = 200
     protocol = "HTTPS"
-    timeout = 20
+    timeout = 5
   }
 }
 
@@ -337,7 +337,7 @@ resource "aws_lb_target_group" "aws5-8800" {
   protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
-  slow_start  = 200
+  slow_start  = 400
   lifecycle {
     create_before_destroy = true
   }
@@ -346,7 +346,7 @@ resource "aws_lb_target_group" "aws5-8800" {
     path    = "/_health_check"
     matcher = 200
     protocol = "HTTPS"
-    timeout = 20
+    timeout = 5
   }
 }
 
@@ -452,7 +452,7 @@ resource "aws_autoscaling_group" "aws5" {
   launch_configuration = aws_launch_configuration.aws5.name
   min_size             = 1
   max_size             = 2
-  health_check_grace_period = 300
+  health_check_grace_period = 400
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
