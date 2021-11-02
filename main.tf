@@ -326,6 +326,7 @@ resource "aws_lb_target_group" "aws5-443" {
     enabled = true
     path    = "/_health_check"
     matcher = 200
+    protocol = "HTTPS"
   }
 }
 
@@ -343,6 +344,7 @@ resource "aws_lb_target_group" "aws5-8800" {
     enabled = true
     path    = "/_health_check"
     matcher = 200
+    protocol = "HTTPS"
   }
 }
 
@@ -446,7 +448,7 @@ variable "aws_autoscaling_group_tags" {
 resource "aws_autoscaling_group" "aws5" {
   name_prefix                 = "aakulov-aws5-asg"
   launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 1
+  min_size             = 2
   max_size             = 2
   health_check_grace_period = 180
   force_delete         = true
@@ -464,7 +466,7 @@ resource "aws_autoscaling_group" "aws5" {
     min_size                    = 1
     max_group_prepared_capacity = 2
   }
-  wait_for_elb_capacity = 1
+  min_elb_capacity = 1
   depends_on = [aws_lb.aws5]
   tags       = var.aws_autoscaling_group_tags
 }
