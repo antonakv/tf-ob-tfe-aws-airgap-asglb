@@ -491,7 +491,7 @@ resource "aws_db_instance" "aws5" {
   password               = var.db_password
   instance_class         = var.db_instance_type
   db_subnet_group_name   = aws_db_subnet_group.aws5.name
-  vpc_security_group_ids = [aws_security_group.aws5-public-sg.id]
+  vpc_security_group_ids = [aws_security_group.aws5-internal-sg.id]
   skip_final_snapshot    = true
   tags = {
     Name = "aakulov-aws5"
