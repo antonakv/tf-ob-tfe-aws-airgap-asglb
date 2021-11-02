@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-date >> /home/ubuntu/install/install_tfe.log
 mkdir -p /home/ubuntu/install
+date >> /home/ubuntu/install/install_tfe.log
 
 EC2_INSTANCE_ID=$(ec2metadata --instance-id)
 
