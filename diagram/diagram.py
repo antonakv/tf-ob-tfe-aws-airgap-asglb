@@ -6,6 +6,8 @@ from diagrams.aws.network import VPC
 from diagrams.aws.general import InternetGateway
 from diagrams.aws.network import RouteTable
 from diagrams.aws.network import NATGateway
+from diagrams.aws.network import PrivateSubnet
+from diagrams.aws.network import PublicSubnet
 
 with Diagram("TFE Airgap ASG LB", show = False, direction="TB"):
     with Cluster("AWS"):
