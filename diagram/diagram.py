@@ -8,6 +8,16 @@ from diagrams.aws.network import RouteTable
 from diagrams.aws.network import NATGateway
 from diagrams.aws.network import PrivateSubnet
 from diagrams.aws.network import PublicSubnet
+from diagrams.aws.compute import EC2ElasticIpAddress
+from diagrams.aws.network import RouteTable
+from diagrams.aws.network import Route53
+from diagrams.aws.storage import SimpleStorageServiceS3Bucket
+from diagrams.aws.security import IAMRole
+from diagrams.aws.security import ACM
+from diagrams.aws.network import ALB
+from diagrams.aws.compute import AutoScaling
+from diagrams.aws.database import RDSPostgresqlInstance
+
 
 with Diagram("TFE Airgap ASG LB", show = False, direction="TB"):
     with Cluster("AWS"):
