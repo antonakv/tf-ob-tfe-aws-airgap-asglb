@@ -499,7 +499,7 @@ resource "aws_db_instance" "aws5" {
   }
 }
 
-resource "aws_s3_bucket" "aws5" {
+resource "aws_s3_bucket" "data" {
   bucket        = "aakulov-aws5-tfe-data"
   acl           = "private"
   force_destroy = false
@@ -508,15 +508,26 @@ resource "aws_s3_bucket" "aws5" {
   }
 }
 
-resource "aws_s3_bucket_object" "logs" {
-  bucket       = aws_s3_bucket.aws5.id
-  acl          = "private"
-  key          = "logs/"
-  content_type = "application/x-directory"
+resource "aws_s3_bucket" "logs" {
+  bucket        = "aakulov-aws5-tfe-logs"
+  acl           = "private"
+  force_destroy = false
+  tags = {
+    Name = "aakulov-aws5-tfe-logs"
+  }
 }
 
-resource "aws_s3_bucket_public_access_block" "aws5" {
-  bucket = aws_s3_bucket.aws5.id
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -580,7 +591,7 @@ resource "aws_iam_role_policy" "aakulov-aws5-ec2-s3" {
         "Sid" : "VisualEditor1",
         "Effect" : "Allow",
         "Action" : "s3:*",
-        "Resource" : aws_s3_bucket.aws5.arn
+        "Resource" : aws_s3_bucket.data.arn
       }
     ]
   })
@@ -594,7 +605,7 @@ data "template_file" "install_tfe_sh" {
     pgsqlhostname = aws_db_instance.aws5.address
     pgsqlpassword = var.db_password
     pguser        = aws_db_instance.aws5.username
-    s3bucket      = aws_s3_bucket.aws5.bucket
+    s3bucket      = aws_s3_bucket.data.bucket
     s3region      = var.region
     cert_pem      = tls_self_signed_cert.aws5.cert_pem
     key_pem       = tls_private_key.aws5.private_key_pem
