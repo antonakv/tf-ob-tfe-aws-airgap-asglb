@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-date
+date >> /home/ubuntu/install/install_tfe.log
 mkdir -p /home/ubuntu/install
 
 EC2_INSTANCE_ID=$(ec2metadata --instance-id)
@@ -149,10 +149,12 @@ yes | sudo ./install.sh airgap no-proxy private-address=$IPADDR public-address=$
 
 chmod +x /home/ubuntu/install/install_tfe.sh
 
-sh /home/ubuntu/install/install_tfe.sh &> /home/ubuntu/install/install_tfe.log
+sh /home/ubuntu/install/install_tfe.sh &>> /home/ubuntu/install/install_tfe.log
+
+date >> /home/ubuntu/install/install_tfe.log
 
 cat /home/ubuntu/install/install_tfe.log >> /home/ubuntu/install/$EC2_INSTANCE_ID.log
 
 aws s3 cp /home/ubuntu/install/$EC2_INSTANCE_ID.log s3://aakulov-aws5-tfe-logs/$EC2_INSTANCE_ID.log 
 
-date
+

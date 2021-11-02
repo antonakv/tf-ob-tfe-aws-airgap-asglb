@@ -322,13 +322,6 @@ resource "aws_lb_target_group" "aws5-443" {
   lifecycle {
     create_before_destroy = true
   }
-  health_check {
-    enabled = true
-    path    = "/_health_check"
-    matcher = 200
-    protocol = "HTTPS"
-    timeout = 5
-  }
 }
 
 resource "aws_lb_target_group" "aws5-8800" {
@@ -340,13 +333,6 @@ resource "aws_lb_target_group" "aws5-8800" {
   slow_start  = 400
   lifecycle {
     create_before_destroy = true
-  }
-  health_check {
-    enabled = true
-    path    = "/_health_check"
-    matcher = 200
-    protocol = "HTTPS"
-    timeout = 5
   }
 }
 
@@ -375,21 +361,21 @@ resource "aws_security_group" "aws5-lb-sg" {
 # Extra security group rules to avoid Cycle error
 
 resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-443" {
-  type = "egress"
-  from_port = 443
-  to_port = 443
-  protocol = "tcp"
-  source_security_group_id = aws_security_group.aws5-lb-sg.id
-  security_group_id = aws_security_group.aws5-internal-sg.id
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.aws5-internal-sg.id 
+  security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
 resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-8800" {
-  type = "egress"
-  from_port = 8800
-  to_port = 8800
-  protocol = "tcp"
-  source_security_group_id = aws_security_group.aws5-lb-sg.id
-  security_group_id = aws_security_group.aws5-internal-sg.id
+  type                     = "egress"
+  from_port                = 8800
+  to_port                  = 8800
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.aws5-internal-sg.id 
+  security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
 resource "aws_lb" "aws5" {
@@ -448,15 +434,15 @@ variable "aws_autoscaling_group_tags" {
 }
 
 resource "aws_autoscaling_group" "aws5" {
-  name_prefix                 = "aakulov-aws5-asg"
-  launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 1
-  max_size             = 2
+  name_prefix               = "aakulov-aws5-asg"
+  launch_configuration      = aws_launch_configuration.aws5.name
+  min_size                  = 1
+  max_size                  = 2
   health_check_grace_period = 400
-  force_delete         = true
-  placement_group      = aws_placement_group.aws5.id
-  vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
-  target_group_arns    = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
+  force_delete              = true
+  placement_group           = aws_placement_group.aws5.id
+  vpc_zone_identifier       = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
+  target_group_arns         = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
   timeouts {
     delete = "15m"
   }
@@ -464,7 +450,7 @@ resource "aws_autoscaling_group" "aws5" {
     create_before_destroy = true
   }
   warm_pool {
-    pool_state = "Running"
+    pool_state                  = "Running"
     min_size                    = 1
     max_group_prepared_capacity = 1
   }
@@ -504,7 +490,7 @@ resource "aws_db_instance" "aws5" {
   name                   = "mydbtfe"
   username               = "postgres"
   password               = var.db_password
-  instance_class         = "db.t2.micro"
+  instance_class         = var.db_instance_type
   db_subnet_group_name   = aws_db_subnet_group.aws5.name
   vpc_security_group_ids = [aws_security_group.aws5-public-sg.id]
   skip_final_snapshot    = true

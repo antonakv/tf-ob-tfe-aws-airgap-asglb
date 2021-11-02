@@ -10,6 +10,11 @@ variable "ami" {
 variable "instance_type" {
   description = "Amazon EC2 instance type"
 }
+
+variable "db_instance_type" {
+  description = "Amazon RDS DB instance type"
+}
+
 variable "cidr_vpc" {
   description = "Amazon EC2 VPC net"
 }
