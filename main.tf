@@ -517,8 +517,8 @@ resource "aws_s3_bucket" "logs" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "data" {
-  bucket = aws_s3_bucket.data.id
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket = aws_s3_bucket.logs.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -526,15 +526,8 @@ resource "aws_s3_bucket_public_access_block" "data" {
   ignore_public_acls      = true
 }
 
-resource "aws_s3_bucket_object" "logs" {
-  bucket       = aws_s3_bucket.logs.id
-  acl          = "private"
-  key          = "logs/"
-  content_type = "application/x-directory"
-}
-
-resource "aws_s3_bucket_public_access_block" "logs" {
-  bucket = aws_s3_bucket.logs.id
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
 
   block_public_acls       = true
   block_public_policy     = true
