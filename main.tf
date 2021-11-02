@@ -209,31 +209,10 @@ resource "aws_security_group" "aws5-internal-sg" {
   }
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 8800
-    to_port     = 8800
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.aws5-lb-sg.id]
-  }
-
-  ingress {
-    from_port       = 8800
-    to_port         = 8800
-    protocol        = "tcp"
-    security_groups = [aws_security_group.aws5-lb-sg.id]
   }
 
   ingress {
@@ -244,17 +223,17 @@ resource "aws_security_group" "aws5-internal-sg" {
   }
 
   ingress {
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [aws_security_group.aws5-lb-sg.id]
+    from_port   = 8800
+    to_port     = 8800
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 8800
+    to_port         = 8800
+    protocol        = "tcp"
+    security_groups = [aws_security_group.aws5-lb-sg.id]
   }
 
   egress {
@@ -282,13 +261,6 @@ resource "aws_security_group" "aws5-public-sg" {
   ingress {
     from_port   = 8800
     to_port     = 8800
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -350,6 +322,11 @@ resource "aws_lb_target_group" "aws5-443" {
   lifecycle {
     create_before_destroy = true
   }
+  health_check {
+    enabled = true
+    path    = "/_health_check"
+    matcher = 200
+  }
 }
 
 resource "aws_lb_target_group" "aws5-8800" {
@@ -361,6 +338,11 @@ resource "aws_lb_target_group" "aws5-8800" {
   slow_start  = 180
   lifecycle {
     create_before_destroy = true
+  }
+  health_check {
+    enabled = true
+    path    = "/_health_check"
+    matcher = 200
   }
 }
 
@@ -384,13 +366,26 @@ resource "aws_security_group" "aws5-lb-sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# Extra security group rules to avoid Cycle error
+
+resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-443" {
+  type = "egress"
+  from_port = 443
+  to_port = 443
+  protocol = "tcp"
+  source_security_group_id = aws_security_group.aws5-lb-sg.id
+  security_group_id = aws_security_group.aws5-internal-sg.id
+}
+
+resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-8800" {
+  type = "egress"
+  from_port = 8800
+  to_port = 8800
+  protocol = "tcp"
+  source_security_group_id = aws_security_group.aws5-lb-sg.id
+  security_group_id = aws_security_group.aws5-internal-sg.id
 }
 
 resource "aws_lb" "aws5" {
@@ -442,7 +437,7 @@ variable "aws_autoscaling_group_tags" {
   default = [
     {
       key                 = "Name"
-      value               = "-aakulov-aws5-asg"
+      value               = "aakulov-aws5-asg#"
       propagate_at_launch = true
     },
   ]
@@ -453,6 +448,7 @@ resource "aws_autoscaling_group" "aws5" {
   launch_configuration = aws_launch_configuration.aws5.name
   min_size             = 1
   max_size             = 2
+  health_check_grace_period = 180
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
@@ -464,10 +460,11 @@ resource "aws_autoscaling_group" "aws5" {
     create_before_destroy = true
   }
   warm_pool {
-    pool_state = "Started"
+    pool_state = "Running"
     min_size                    = 1
     max_group_prepared_capacity = 2
   }
+  wait_for_elb_capacity = 1
   depends_on = [aws_lb.aws5]
   tags       = var.aws_autoscaling_group_tags
 }
