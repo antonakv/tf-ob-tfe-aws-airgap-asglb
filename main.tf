@@ -24,7 +24,6 @@ resource "tls_self_signed_cert" "aws5" {
     common_name  = var.tfe_hostname
     organization = "aakulov sandbox"
   }
-
 }
 
 resource "aws_vpc" "vpc" {
@@ -365,7 +364,7 @@ resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-443" {
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.aws5-internal-sg.id 
+  source_security_group_id = aws_security_group.aws5-internal-sg.id
   security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
@@ -374,7 +373,7 @@ resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-8800" {
   from_port                = 8800
   to_port                  = 8800
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.aws5-internal-sg.id 
+  source_security_group_id = aws_security_group.aws5-internal-sg.id
   security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
