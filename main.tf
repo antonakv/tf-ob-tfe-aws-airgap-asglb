@@ -265,11 +265,11 @@ resource "aws_security_group" "aws5-internal-sg" {
   }
 }
 
-resource "aws_security_group" "aakulov-aws5" {
+resource "aws_security_group" "aws5-public-sg" {
   vpc_id = aws_vpc.vpc.id
-  name   = "aakulov-aws5-sg"
+  name   = "aakulov-aws5-public-sg"
   tags = {
-    Name = "aakulov-aws5-sg"
+    Name = "aakulov-aws5-public-sg"
   }
 
   ingress {
@@ -335,6 +335,9 @@ resource "aws_acm_certificate" "aws5" {
 
 resource "aws_acm_certificate_validation" "aws5" {
   certificate_arn = aws_acm_certificate.aws5.arn
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_target_group" "aws5-443" {
@@ -363,16 +366,9 @@ resource "aws_lb_target_group" "aws5-8800" {
 
 resource "aws_security_group" "aws5-lb-sg" {
   vpc_id = aws_vpc.vpc.id
-  name   = "aws5-lb-sg"
+  name   = "aakulov-aws5-lb-sg"
   tags = {
-    Name = "aws5-lb-sg"
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    Name = "aakulov-aws5-lb-sg"
   }
 
   ingress {
@@ -389,13 +385,6 @@ resource "aws_security_group" "aws5-lb-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -408,6 +397,7 @@ resource "aws_lb" "aws5" {
   name                             = "aakulov-aws5"
   internal                         = false
   load_balancer_type               = "application"
+  security_groups                  = [aws_security_group.aws5-lb-sg.id]
   enable_cross_zone_load_balancing = true
   subnets                          = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
   enable_deletion_protection       = false
@@ -448,11 +438,21 @@ resource "aws_placement_group" "aws5" {
   strategy = "spread"
 }
 
+variable "aws_autoscaling_group_tags" {
+  default = [
+    {
+      key                 = "Name"
+      value               = "-aakulov-aws5-asg"
+      propagate_at_launch = true
+    },
+  ]
+}
+
 resource "aws_autoscaling_group" "aws5" {
-  name                 = "aakulov-aws5"
+  name_prefix                 = "aakulov-aws5-asg"
   launch_configuration = aws_launch_configuration.aws5.name
   min_size             = 1
-  max_size             = 1
+  max_size             = 2
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
@@ -463,7 +463,13 @@ resource "aws_autoscaling_group" "aws5" {
   lifecycle {
     create_before_destroy = true
   }
+  warm_pool {
+    pool_state = "Started"
+    min_size                    = 1
+    max_group_prepared_capacity = 2
+  }
   depends_on = [aws_lb.aws5]
+  tags       = var.aws_autoscaling_group_tags
 }
 
 resource "aws_route53_record" "cert_validation" {
@@ -484,7 +490,7 @@ resource "aws_route53_record" "cert_validation" {
 
 resource "aws_db_subnet_group" "aws5" {
   name       = "aakulov-aws5"
-  subnet_ids = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id, aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
+  subnet_ids = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
   tags = {
     Name = "aakulov-aws5"
   }
@@ -500,7 +506,7 @@ resource "aws_db_instance" "aws5" {
   password               = var.db_password
   instance_class         = "db.t2.micro"
   db_subnet_group_name   = aws_db_subnet_group.aws5.name
-  vpc_security_group_ids = [aws_security_group.aakulov-aws5.id]
+  vpc_security_group_ids = [aws_security_group.aws5-public-sg.id]
   skip_final_snapshot    = true
   tags = {
     Name = "aakulov-aws5"
