@@ -340,25 +340,25 @@ resource "aws_acm_certificate_validation" "aws5" {
 resource "aws_lb_target_group" "aws5-443" {
   name        = "aakulov-aws5-443"
   port        = 443
-  protocol    = "TCP"
+  protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
+  slow_start  = 180
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_target_group" "aws5-8800" {
   name        = "aakulov-aws5-8800"
   port        = 8800
-  protocol    = "TCP"
+  protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
-}
-
-resource "aws_lb_target_group" "aws5-22" {
-  name        = "aakulov-aws5-22"
-  port        = 22
-  protocol    = "TCP"
-  vpc_id      = aws_vpc.vpc.id
-  target_type = "instance"
+  slow_start  = 180
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "aws5-lb-sg" {
@@ -405,18 +405,20 @@ resource "aws_security_group" "aws5-lb-sg" {
 }
 
 resource "aws_lb" "aws5" {
-  name               = "aakulov-aws5"
-  internal           = false
-  load_balancer_type = "network"
+  name                             = "aakulov-aws5"
+  internal                         = false
+  load_balancer_type               = "application"
   enable_cross_zone_load_balancing = true
-  subnets            = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
-  enable_deletion_protection = false
+  subnets                          = [aws_subnet.subnet_public1.id, aws_subnet.subnet_public2.id]
+  enable_deletion_protection       = false
 }
 
 resource "aws_lb_listener" "aws5-443" {
   load_balancer_arn = aws_lb.aws5.arn
   port              = "443"
-  protocol          = "TCP"
+  protocol          = "HTTPS"
+  certificate_arn   = aws_acm_certificate.aws5.arn
+  ssl_policy        = "ELBSecurityPolicy-FS-1-2-Res-2020-10"
   depends_on = [
     aws_lb.aws5
   ]
@@ -429,26 +431,15 @@ resource "aws_lb_listener" "aws5-443" {
 resource "aws_lb_listener" "aws5-8800" {
   load_balancer_arn = aws_lb.aws5.arn
   port              = "8800"
-  protocol          = "TCP"
+  protocol          = "HTTPS"
+  certificate_arn   = aws_acm_certificate.aws5.arn
+  ssl_policy        = "ELBSecurityPolicy-FS-1-2-Res-2020-10"
   depends_on = [
     aws_lb.aws5
   ]
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.aws5-8800.arn
-  }
-}
-
-resource "aws_lb_listener" "aws5-22" {
-  load_balancer_arn = aws_lb.aws5.arn
-  port              = "22"
-  protocol          = "TCP"
-  depends_on = [
-    aws_lb.aws5
-  ]
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.aws5-22.arn
   }
 }
 
@@ -465,7 +456,7 @@ resource "aws_autoscaling_group" "aws5" {
   force_delete         = true
   placement_group      = aws_placement_group.aws5.id
   vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
-  target_group_arns    = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn, aws_lb_target_group.aws5-22.arn]
+  target_group_arns    = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
   timeouts {
     delete = "15m"
   }
