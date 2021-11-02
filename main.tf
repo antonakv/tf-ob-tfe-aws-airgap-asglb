@@ -499,18 +499,24 @@ resource "aws_db_instance" "aws5" {
 }
 
 resource "aws_s3_bucket" "data" {
-  bucket        = "aakulov-aws5-tfe-data"
-  acl           = "private"
-  force_destroy = false
+  bucket = "aakulov-aws5-tfe-data"
+  acl    = "private"
+  versioning {
+    enabled = true
+  }
+  force_destroy = true
   tags = {
     Name = "aakulov-aws5-tfe-data"
   }
 }
 
 resource "aws_s3_bucket" "logs" {
-  bucket        = "aakulov-aws5-tfe-logs"
-  acl           = "private"
-  force_destroy = false
+  bucket = "aakulov-aws5-tfe-logs"
+  acl    = "private"
+  versioning {
+    enabled = true
+  }
+  force_destroy = true
   tags = {
     Name = "aakulov-aws5-tfe-logs"
   }
