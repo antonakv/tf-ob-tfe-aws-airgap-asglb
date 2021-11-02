@@ -508,6 +508,15 @@ resource "aws_s3_bucket" "data" {
   }
 }
 
+resource "aws_s3_bucket" "logs" {
+  bucket        = "aakulov-aws5-tfe-logs"
+  acl           = "private"
+  force_destroy = false
+  tags = {
+    Name = "aakulov-aws5-tfe-logs"
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "data" {
   bucket = aws_s3_bucket.data.id
 
@@ -518,7 +527,7 @@ resource "aws_s3_bucket_public_access_block" "data" {
 }
 
 resource "aws_s3_bucket_object" "logs" {
-  bucket       = aws_s3_bucket.data.id
+  bucket       = aws_s3_bucket.logs.id
   acl          = "private"
   key          = "logs/"
   content_type = "application/x-directory"
