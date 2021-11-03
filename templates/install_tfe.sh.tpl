@@ -145,7 +145,7 @@ cp /home/ubuntu/install/replicated.conf /etc/replicated.conf
 cp /home/ubuntu/install/replicated.conf /root/replicated.conf
 chown -R ubuntu: /home/ubuntu/install
 
-yes | sudo ./install.sh airgap no-proxy private-address=$IPADDR public-address=$IPADDR" > /home/ubuntu/install/install_tfe.sh
+yes | sudo ./install.sh airgap no-proxy private-address=$IPADDR public-address=$IPADDR" &>> /home/ubuntu/install/install_tfe.sh
 
 chmod +x /home/ubuntu/install/install_tfe.sh
 
@@ -155,6 +155,6 @@ date >> /home/ubuntu/install/install_tfe.log
 
 cat /home/ubuntu/install/install_tfe.log >> /home/ubuntu/install/$EC2_INSTANCE_ID.log
 
+cat /home/ubuntu/install/curl_output.log >> /home/ubuntu/install/$EC2_INSTANCE_ID.log
+
 aws s3 cp /home/ubuntu/install/$EC2_INSTANCE_ID.log s3://aakulov-aws5-tfe-logs/$EC2_INSTANCE_ID.log 
-
-
