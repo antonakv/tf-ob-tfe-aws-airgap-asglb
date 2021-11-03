@@ -504,9 +504,12 @@ resource "aws_s3_bucket" "data" {
   versioning {
     enabled = true
   }
-  force_destroy = true
+  force_destroy = false
   tags = {
     Name = "aakulov-aws5-tfe-data"
+  }
+  lifecycle {
+    prevent_destroy = false
   }
 }
 
@@ -519,6 +522,9 @@ resource "aws_s3_bucket" "logs" {
   force_destroy = true
   tags = {
     Name = "aakulov-aws5-tfe-logs"
+  }
+  lifecycle {
+    prevent_destroy = false
   }
 }
 
