@@ -321,6 +321,10 @@ resource "aws_lb_target_group" "aws5-443" {
   lifecycle {
     create_before_destroy = true
   }
+  stickiness {
+    enabled = true
+    type    = "lb_cookie"
+  }
 }
 
 resource "aws_lb_target_group" "aws5-8800" {
