@@ -24,7 +24,6 @@ resource "tls_self_signed_cert" "aws5" {
     common_name  = var.tfe_hostname
     organization = "aakulov sandbox"
   }
-
 }
 
 resource "aws_vpc" "vpc" {
@@ -236,6 +235,13 @@ resource "aws_security_group" "aws5-internal-sg" {
     security_groups = [aws_security_group.aws5-lb-sg.id]
   }
 
+  ingress {
+    from_port = 5432
+    to_port   = 5432
+    protocol  = "tcp"
+    self      = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -270,13 +276,6 @@ resource "aws_security_group" "aws5-public-sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 5432
-    to_port   = 5432
-    protocol  = "tcp"
-    self      = true
   }
 
   egress {
@@ -318,14 +317,9 @@ resource "aws_lb_target_group" "aws5-443" {
   protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
-  slow_start  = 180
+  slow_start  = 400
   lifecycle {
     create_before_destroy = true
-  }
-  health_check {
-    enabled = true
-    path    = "/_health_check"
-    matcher = 200
   }
 }
 
@@ -335,14 +329,9 @@ resource "aws_lb_target_group" "aws5-8800" {
   protocol    = "HTTPS"
   vpc_id      = aws_vpc.vpc.id
   target_type = "instance"
-  slow_start  = 180
+  slow_start  = 400
   lifecycle {
     create_before_destroy = true
-  }
-  health_check {
-    enabled = true
-    path    = "/_health_check"
-    matcher = 200
   }
 }
 
@@ -371,21 +360,21 @@ resource "aws_security_group" "aws5-lb-sg" {
 # Extra security group rules to avoid Cycle error
 
 resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-443" {
-  type = "egress"
-  from_port = 443
-  to_port = 443
-  protocol = "tcp"
-  source_security_group_id = aws_security_group.aws5-lb-sg.id
-  security_group_id = aws_security_group.aws5-internal-sg.id
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.aws5-internal-sg.id
+  security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
 resource "aws_security_group_rule" "aws5-lb-sg-to-aws5-internal-sg-allow-8800" {
-  type = "egress"
-  from_port = 8800
-  to_port = 8800
-  protocol = "tcp"
-  source_security_group_id = aws_security_group.aws5-lb-sg.id
-  security_group_id = aws_security_group.aws5-internal-sg.id
+  type                     = "egress"
+  from_port                = 8800
+  to_port                  = 8800
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.aws5-internal-sg.id
+  security_group_id        = aws_security_group.aws5-lb-sg.id
 }
 
 resource "aws_lb" "aws5" {
@@ -444,15 +433,15 @@ variable "aws_autoscaling_group_tags" {
 }
 
 resource "aws_autoscaling_group" "aws5" {
-  name_prefix                 = "aakulov-aws5-asg"
-  launch_configuration = aws_launch_configuration.aws5.name
-  min_size             = 1
-  max_size             = 2
-  health_check_grace_period = 180
-  force_delete         = true
-  placement_group      = aws_placement_group.aws5.id
-  vpc_zone_identifier  = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
-  target_group_arns    = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
+  name_prefix               = "aakulov-aws5-asg"
+  launch_configuration      = aws_launch_configuration.aws5.name
+  min_size                  = 1
+  max_size                  = 2
+  health_check_grace_period = 400
+  force_delete              = true
+  placement_group           = aws_placement_group.aws5.id
+  vpc_zone_identifier       = [aws_subnet.subnet_private1.id, aws_subnet.subnet_private2.id]
+  target_group_arns         = [aws_lb_target_group.aws5-443.arn, aws_lb_target_group.aws5-8800.arn]
   timeouts {
     delete = "15m"
   }
@@ -460,11 +449,10 @@ resource "aws_autoscaling_group" "aws5" {
     create_before_destroy = true
   }
   warm_pool {
-    pool_state = "Running"
+    pool_state                  = "Running"
     min_size                    = 1
-    max_group_prepared_capacity = 2
+    max_group_prepared_capacity = 1
   }
-  wait_for_elb_capacity = 1
   depends_on = [aws_lb.aws5]
   tags       = var.aws_autoscaling_group_tags
 }
@@ -503,31 +491,54 @@ resource "aws_db_instance" "aws5" {
   password               = var.db_password
   instance_class         = var.db_instance_type
   db_subnet_group_name   = aws_db_subnet_group.aws5.name
-  vpc_security_group_ids = [aws_security_group.aws5-public-sg.id]
+  vpc_security_group_ids = [aws_security_group.aws5-internal-sg.id]
   skip_final_snapshot    = true
   tags = {
     Name = "aakulov-aws5"
   }
 }
 
-resource "aws_s3_bucket" "aws5" {
-  bucket        = "aakulov-aws5-tfe-data"
-  acl           = "private"
+resource "aws_s3_bucket" "data" {
+  bucket = "aakulov-aws5-tfe-data"
+  acl    = "private"
+  versioning {
+    enabled = true
+  }
   force_destroy = false
   tags = {
     Name = "aakulov-aws5-tfe-data"
   }
+  lifecycle {
+    prevent_destroy = false
+  }
 }
 
-resource "aws_s3_bucket_object" "logs" {
-  bucket       = aws_s3_bucket.aws5.id
-  acl          = "private"
-  key          = "logs/"
-  content_type = "application/x-directory"
+resource "aws_s3_bucket" "logs" {
+  bucket = "aakulov-aws5-tfe-logs"
+  acl    = "private"
+  versioning {
+    enabled = true
+  }
+  force_destroy = true
+  tags = {
+    Name = "aakulov-aws5-tfe-logs"
+  }
+  lifecycle {
+    prevent_destroy = false
+  }
 }
 
-resource "aws_s3_bucket_public_access_block" "aws5" {
-  bucket = aws_s3_bucket.aws5.id
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+  ignore_public_acls      = true
+}
+
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -591,7 +602,7 @@ resource "aws_iam_role_policy" "aakulov-aws5-ec2-s3" {
         "Sid" : "VisualEditor1",
         "Effect" : "Allow",
         "Action" : "s3:*",
-        "Resource" : aws_s3_bucket.aws5.arn
+        "Resource" : aws_s3_bucket.data.arn
       }
     ]
   })
@@ -605,7 +616,7 @@ data "template_file" "install_tfe_sh" {
     pgsqlhostname = aws_db_instance.aws5.address
     pgsqlpassword = var.db_password
     pguser        = aws_db_instance.aws5.username
-    s3bucket      = aws_s3_bucket.aws5.bucket
+    s3bucket      = aws_s3_bucket.data.bucket
     s3region      = var.region
     cert_pem      = tls_self_signed_cert.aws5.cert_pem
     key_pem       = tls_private_key.aws5.private_key_pem

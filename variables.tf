@@ -12,7 +12,7 @@ variable "instance_type" {
 }
 
 variable "db_instance_type" {
-  description = "Amazon RDS instance type"
+  description = "Amazon RDS DB instance type"
 }
 
 variable "cidr_vpc" {
