@@ -235,6 +235,13 @@ resource "aws_security_group" "aws5-internal-sg" {
     security_groups = [aws_security_group.aws5-lb-sg.id]
   }
 
+  ingress {
+    from_port = 5432
+    to_port   = 5432
+    protocol  = "tcp"
+    self      = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -269,13 +276,6 @@ resource "aws_security_group" "aws5-public-sg" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port = 5432
-    to_port   = 5432
-    protocol  = "tcp"
-    self      = true
   }
 
   egress {
