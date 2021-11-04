@@ -1,4 +1,4 @@
-# tf-ob-tfe-aws-airgap pre-req
+# tf-ob-tfe-aws-airgap-asglb pre-req
 
 This manual is dedicated to upload Terrafrom Enterprise assets required for the installation to Amazon S3
 
