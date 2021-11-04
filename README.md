@@ -19,6 +19,9 @@ This manual is dedicated to Install Terraform Enterprise Prod version External S
 - Created Amazon EC2 key pair for Linux instance
 [Create a key pair using Amazon EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair)
 
+- Amazon AWS AMI image generated with Packer 
+[Packer build of Ubuntu Focal AMI image](https://github.com/antonakv/packer-aws-ubuntufocal-tfe)
+
 ## Amazon AWS Resources diagram
 
  ![Diagram](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/diagram/diagram.png)
