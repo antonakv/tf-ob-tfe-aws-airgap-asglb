@@ -34,18 +34,6 @@ This manual is dedicated to Install Terraform Enterprise Prod version External S
 git clone https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb.git
 ```
 
-Expected command output looks like this:
-
-```bash
-Cloning into 'tf-ob-tfe-aws-airgap-asglb'...
-remote: Enumerating objects: 12, done.
-remote: Counting objects: 100% (12/12), done.
-remote: Compressing objects: 100% (12/12), done.
-remote: Total 12 (delta 1), reused 3 (delta 0), pack-reused 0
-Receiving objects: 100% (12/12), done.
-Resolving deltas: 100% (1/1), done.
-```
-
 - Change folder to tf-ob-tfe-aws-airgap-asglb
 
 ```bash
@@ -78,13 +66,36 @@ tfe_hostname     = "tfe5.myname.hashicorp-success.com"
 
 `cd ..`
 
-## Run terraform code
+- run `terraform init`
 
-- In the same folder you were before, run 
+- run `terraform apply`
 
-```bash
-terraform init
-```
+## Usage
+
+- Wait about 5-10 minutes until Terraform Enterprise instances are up and running and 502 Error code is not displayed
+
+- Open the URL `https://tfe5.myname.hashicorp-success.com:8800/` in a web browser
+
+- Expected result:
+
+![TFE login page](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-1.png)
+
+- Enter password ```Password1#``` and click ```Unlock```
+
+- Expected result:
+
+ ![Unlock](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-2.png)
+
+- Click on `Dashboard`
+
+- Expected result:
+
+ ![Dashboard](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-3.png)
+ 
+ # Sample output
+ 
+- `terraform init`
+
 
 Sample result
 
@@ -1665,25 +1676,3 @@ Outputs:
 
 aws_url = "tfe5.anton.hashicorp-success.com"
 ```
-
-## Usage
-
-- Wait about 5-10 minutes until Terraform Enterprise instances are up and running and 502 Error code is not displayed
-
-- Open the URL `https://tfe5.myname.hashicorp-success.com:8800/` in a web browser
-
-- Expected result:
-
-![TFE login page](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-1.png)
-
-- Enter password ```Password1#``` and click ```Unlock```
-
-- Expected result:
-
- ![Unlock](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-2.png)
-
-- Click on `Dashboard`
-
-- Expected result:
-
- ![Dashboard](https://github.com/antonakv/tf-ob-tfe-aws-airgap-asglb/raw/main/images/tf-ob-tfe-aws-airgap-asglb-3.png)
