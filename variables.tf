@@ -44,3 +44,7 @@ variable "tfe_hostname" {
   type        = string
   description = "Terraform Enterprise hostname"
 }
+variable "release_sequence" {
+  type        = number
+  description = "Terraform Enterprise release sequence number"
+}
